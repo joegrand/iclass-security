@@ -24,28 +24,49 @@
 */
 #include "pic18fregs.h"
 
-// same configuratio as the HID reader
-code char at __CONFIG1H c1h = 0x22;
+// same configuration as the HID reader
+//static __code char __at __CONFIG1H c1h = 0x22;
+#pragma config OSCS=OFF, OSC=HS
 
-code char at __CONFIG2H c2h = 0x0F;
-code char at __CONFIG2L c2l = 0x0A;
+//static __code char __at __CONFIG2H c2h = 0x0F;
+//#pragma config WDTPS=128, WDT=ON
+#pragma config WDT=OFF
 
-code char at __CONFIG3H c3h = 0x01;
+//static __code char __at __CONFIG2L c2l = 0x0A;
+#pragma config BORV=27, BOR=ON, PWRT=ON
 
-code char at __CONFIG4L c4l = 0x81;
+//static __code char __at __CONFIG3H c3h = 0x01;
+#pragma config CCP2MUX=ON
 
-code char at __CONFIG5H c5h = 0x00;
-code char at __CONFIG5L c5l = 0x00;
+//static __code char __at __CONFIG4L c4l = 0x81;
+#pragma config DEBUG=OFF, LVP=OFF, STVR=ON
 
-code char at __CONFIG6H c6h = 0x80;
-code char at __CONFIG6L c6l = 0x00;
+//static __code char __at __CONFIG5H c5h = 0x00;
+//#pragma config CPD=ON, CPB=ON
+#pragma config CPD=OFF, CPB=OFF
 
-code char at __CONFIG7H c7h = 0x40;
-code char at __CONFIG7L c7l = 0x0F;
+//static __code char __at __CONFIG5L c5l = 0x00;
+//#pragma config CP0=ON, CP1=ON, CP2=ON, CP3=ON
+#pragma config CP0=OFF, CP1=OFF, CP2=OFF, CP3=OFF
+
+//static __code char __at __CONFIG6H c6h = 0x80;
+//#pragma config WRTD=OFF, WRTB=ON
+#pragma config WRTD=OFF, WRTB=OFF
+
+//static __code char __at __CONFIG6L c6l = 0x00;
+//#pragma config WRT0=ON, WRT1=ON, WRT2=ON, WRT3=ON
+#pragma config WRT0=OFF, WRT1=OFF, WRT2=OFF, WRT3=OFF
+
+//static __code char __at __CONFIG7H c7h = 0x40;
+#pragma config EBTRB=OFF
+
+//static __code char __at __CONFIG7L c7l = 0x0F;
+#pragma config EBTR0=OFF, EBTR1=OFF, EBTR2=OFF, EBTR3=OFF
 
 // add some data to the end to verify if dumping works
 //code short at 0x800  test2 = 0x1234;
 //code short at 0x7FFE test1 = 0x5678;
+//__code short __at 0x7FFE test = 0xBEEF;
 
 #define LED_GREEN	PORTBbits.RB1
 #define LED_RED		PORTBbits.RB2
@@ -56,38 +77,43 @@ void
 main ()
 {
   CODEPTR c;
-  TRISB = 0b11111001;
+  TRISB = 0b11111001; // Set RB1, RB2 to output
   TRISCbits.TRISC6 = 0;
 
-  // Gobally disable IRQs
+  // Globally disable IRQs
   INTCONbits.GIE = 0;
 
-  // init USART peripheral
-  RCSTAbits.SPEN = 1;
-  // baud rate to 115200 Baud
-  SPBRG = 6;
-  // enable TX + high speed mode
-  TXSTA = 0b00100100;
+  // Baud rate to 115200 Baud (FOSC = 20MHz)
+  SPBRG = 10; // SPBRG = ((FOSC / DesiredBaudRate) / 16) – 1
+    
+  // 8-bit asynchronous TX + high speed mode
+  TXSTA = 0b00000100;
 
-  // light red LED to indicate dump process
+  // Initialize USART peripheral
+  RCSTAbits.SPEN = 1;
+
+  // Enable USART peripheral
+  TXSTAbits.TXEN = 1;
+    
+  // Light red LED to indicate dump process
   LED_RED = 0;
   LED_GREEN = 1;
 
   c = 0;
   do
-    {
+  {
       TXREG = *c++;
-      while (!TXSTAbits.TRMT);
-      ClrWdt ();
-    }
+      while (!TXSTAbits.TRMT);  // Wait until Transmit Shift Register is empty
+      //ClrWdt ();
+  }
   while (c != (CODEPTR) 0x8000);
 
-  // turn off red LED
-  // light green LED to indicate stopped dump process
+  // Turn off red LED
+  // Light green LED to indicate stopped dump process
   LED_RED = 1;
   LED_GREEN = 0;
 
-  // sit there idle
-  for (;;)
-    ClrWdt ();
+  // Sit idle
+  for (;;);
+    //ClrWdt ();
 }
