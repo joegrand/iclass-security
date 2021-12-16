@@ -2,7 +2,7 @@ object FM_Main: TFM_Main
   Left = 0
   Top = 0
   BorderStyle = bsSingle
-  Caption = 'ICD Programmer for Microchip'
+  Caption = 'ICSP Tool for Microchip PIC'
   ClientHeight = 433
   ClientWidth = 667
   Color = clBtnFace

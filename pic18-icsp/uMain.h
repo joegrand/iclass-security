@@ -73,7 +73,7 @@ private:			// Anwender-Deklarationen
   void __fastcall ICD_SetTblPtr (DWORD addr);
   void __fastcall ICD_WriteMem (DWORD addr, UCHAR data);
   int __fastcall ICD_Wait (DWORD time);
-  int __fastcall ICD_BulkErase (USHORT cmd);
+  void __fastcall ICD_BulkErase (USHORT cmd);
 public:			// Anwender-Deklarationen
     __fastcall TFM_Main (TComponent * Owner);
     __fastcall ~ TFM_Main (void);

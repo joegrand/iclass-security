@@ -24,6 +24,10 @@
 
 */
 
+// Modified by Joe Grand [@joegrand, grandideastudio.com], December 2021
+// Embarcadero C++ Builder 10.4 Community Edition
+
+// For use with Microchip PIC18FXX2/XX8
 
 // ---------------------------------------------------------------------------
 #define VC_EXTRALEAN
@@ -42,12 +46,12 @@ TFM_Main *FM_Main;
 #define ICD_TX_BITS 16
 #define KEY_SEQUENCE 0x4D434850UL
 // ---------------------------------------------------------------------------
-#define PIN_CLR (1<<1)		// Yellow = Vpp/MCLR
-// Red    = Vdd
-// Black  = Vss
-#define PIN_PGD (1<<2)		// Green  = PGD
-#define PIN_PGC (1<<0)		// Orange = PGC
-#define PIN_PGD_IN (1<<3)	// Brown  = PGM
+#define PIN_CLR (1<<1)		// Yellow (RXD)    = Vpp/MCLR (unused)
+							// Red (VCC, +5V)  = Vdd      (unused)
+							// Black (GND)     = Vss
+#define PIN_PGD (1<<2)		// Green (RTS#)    = PGD
+#define PIN_PGC (1<<0)		// Orange (TXD)    = PGC
+#define PIN_PGD_IN (1<<3)	// Brown (CTS#)    = PGM
 #define PIN_OUT (PIN_PGC|PIN_CLR|PIN_PGD)
 // ---------------------------------------------------------------------------
 #define PGM_CORE_INST                    0	// 0b0000
@@ -65,33 +69,32 @@ TFM_Main *FM_Main;
 // ---------------------------------------------------------------------------
 const unsigned short code_dumper[] = {
   0xF90E, 0x936E, 0x949C, 0xF29E,
-  0xAB8E, 0x060E, 0xAF6E, 0x240E,
-//      0xAB8E, 0x070E, 0xAF6E, 0x240E,
-  0xAC6E, 0x8194, 0x8182, 0x006A,
-  0x016A, 0x026A, 0x00C0, 0xF6FF,
+  0x0A0E, 0xAF6E, 0x040E, 0xAC6E,
+  0xAB8E, 0xAC8A, 0x8194, 0x8182,
+  0x006A, 0x016A, 0x026A, 0x00C0,
 
-  0x01C0, 0xF7FF, 0x02C0, 0xF8FF,
-  0x0900, 0xF5CF, 0xADFF, 0x002A,
-  0xD8B0, 0x012A, 0xD8B0, 0x022A,
-  0xACA2, 0xFED7, 0x0400, 0x0050,
+  0xF6FF, 0x01C0, 0xF7FF, 0x02C0,
+  0xF8FF, 0x0900, 0xF5CF, 0xADFF,
+  0x002A, 0x02E3, 0x014A, 0x022A,
+  0xACA2, 0xFED7, 0x0050, 0x05E1,
 
-  0x05E1, 0x0150, 0x800A, 0x02E1,
-  0x0250, 0x01E0, 0xE7D7, 0x8184,
-  0x8192, 0x0400, 0xFED7, 0x1200,
+  0x0150, 0x800A, 0x02E1, 0x0250,
+  0x01E0, 0xE9D7, 0x8184, 0x8192,
+  0xFFD7, 0x1200, 0xFFFF, 0xFFFF,
   0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF
 };
 
 // ---------------------------------------------------------------------------
 const unsigned short eeprom_dumper[] = {
   0xF90E, 0x936E, 0x949C, 0xF29E,
-  0xAB8E, 0x060E, 0xAF6E, 0x240E,
-  0xAC6E, 0x8194, 0x8182, 0xA96A,
-  0xA69C, 0xA69E, 0xA680, 0xA8CF,
+  0x0A0E, 0xAF6E, 0x040E, 0xAC6E,
+  0xAB8E, 0xAC8A, 0x8194, 0x8182,
+  0xA96A, 0xA69C, 0xA69E, 0xA680,
 
-  0xADFF, 0xA92A, 0xACA2, 0xFED7,
-  0x0400, 0xA950, 0xF7E1, 0x8184,
-  0x8192, 0x0400, 0xFED7, 0x1200,
-  0x0000, 0x0000, 0x0000, 0x0000
+  0xA8CF, 0xADFF, 0xA9CF, 0x00F0,
+  0x0028, 0xA96E, 0xACA2, 0xFED7,
+  0xA950, 0xF5E1, 0x8194, 0x8192,
+  0xFFD7, 0x1200, 0x0000, 0x0000
 };
 
 // ---------------------------------------------------------------------------
@@ -147,12 +150,12 @@ TFM_Main::BT_ConnectClick (TObject * Sender)
 {
   FT_STATUS ftStatus;
   DWORD Written, Read;
-  UCHAR data;
+  //UCHAR data;
 
   if (FT_Open (CB_Devices->ItemIndex, &m_Handle) == FT_OK)
     {
       // reset lines to 0
-      data = 0x00;
+	  //data = 0x00;
 
       if ((FT_SetBitMode (m_Handle, PIN_OUT, 0x4) == FT_OK) &&
 	  (FT_SetBaudRate (m_Handle, 1000000) == FT_OK) &&
@@ -241,8 +244,8 @@ TFM_Main::ICD_Enter (DWORD data)
 int __fastcall
 TFM_Main::ICD_Wait (DWORD time)
 {
-  int res, i;
-  UCHAR tx[4 * 2], *p, out;
+  int res;
+  UCHAR i, tx[4 * 2], *p, out;
   DWORD count;
 
   p = tx;
@@ -282,7 +285,7 @@ TFM_Main::ICD_ReadTblPtr (void)
       out = PIN_CLR | PIN_PGC;
       // get CMD LSB first
       if (cmd & 1)
-	out |= PIN_PGD;
+		out |= PIN_PGD;
       cmd >>= 1;
       // shift out PGD data + PGC
       *p++ = out;
@@ -321,7 +324,7 @@ TFM_Main::ICD_Write (UCHAR cmd, USHORT data)
       out = PIN_CLR | PIN_PGC;
       // get CMD LSB first
       if (cmd & 1)
-	out |= PIN_PGD;
+		out |= PIN_PGD;
       cmd >>= 1;
       // shift out PGD data + PGC
       *p++ = out;
@@ -335,7 +338,7 @@ TFM_Main::ICD_Write (UCHAR cmd, USHORT data)
       out = PIN_CLR | PIN_PGC;
       // get DATA LSB first
       if (data & 1)
-	out |= PIN_PGD;
+		out |= PIN_PGD;
       data >>= 1;
       // shift out PGD data + PGC
       *p++ = out;
@@ -380,7 +383,7 @@ TFM_Main::ICD_WriteMem (DWORD addr, UCHAR data)
 }
 
 // ---------------------------------------------------------------------------
-int __fastcall
+void __fastcall
 TFM_Main::ICD_BulkErase (USHORT cmd)
 {
   if (cmd != 0x3F8F)
@@ -408,7 +411,7 @@ TFM_Main::ICD_BulkErase (USHORT cmd)
 void __fastcall
 TFM_Main::OnIcdEnter (TObject * Sender)
 {
-  // ICD_Enter(0x4D434850);
+  // ICD_Enter(0x4D434850);   // "MCHP"
   ICD_Leave ();
 }
 
@@ -494,7 +497,7 @@ TFM_Main::OnErase1 (TObject * Sender)
 
 // ---------------------------------------------------------------------------
 void __fastcall
-TFM_Main::Button4Click (TObject * Sender)
+TFM_Main::Button4Click (TObject * Sender)  // Write dumper to Flash
 {
   int i, j;
   const unsigned short *p;
@@ -520,7 +523,7 @@ TFM_Main::Button4Click (TObject * Sender)
       data = *p++;
       data = (data >> 8) | (data << 8);
 
-      if ((i & 0x3) == 0x3)
+	  if ((i & 0x3) == 0x3)
 	{
 	  // write 2 bytes and start programming
 	  ICD_Write (PGM_TABLE_WRITE_PGM, data);
@@ -566,6 +569,8 @@ TFM_Main::OnEraseBoot (TObject * Sender)
   // BSF EECON1, WREN
   ICD_Write (PGM_CORE_INST, 0x84A6);
 
+  // PIC18F452, from DS39576C pg. 7
+  // PIC18FXX2/XX8 Flash Microcontroller Programming Specification
   ICD_WriteMem (0x3C0004, 0x83);
 
   // issue NOP twice
